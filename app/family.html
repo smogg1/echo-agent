@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>回声 Agent · 家属授权（第二通道）</title>
+<style>
+  :root {
+    --ink: #111214; --sub: #6E7378; --mute: #9AA0A6;
+    --line: #EBECEE; --line-2: #DEDFE2; --bg: #FBFBFC;
+    --shadow: 0 1px 2px rgba(17, 18, 20, .04), 0 20px 60px rgba(17, 18, 20, .08);
+    --amber-bg: #FBF6E9;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "PingFang SC", "Microsoft YaHei", -apple-system, "Segoe UI", system-ui, sans-serif;
+    background: var(--bg); color: var(--ink); font-size: 14px; line-height: 1.65;
+    min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { width: 100%; max-width: 520px; }
+  .brand { font-size: 12px; letter-spacing: 2px; color: var(--mute); text-transform: uppercase; margin-bottom: 14px; }
+  .card {
+    background: #fff; border: 1px solid var(--line); border-radius: 20px;
+    padding: 34px 32px 30px; box-shadow: var(--shadow);
+  }
+  h1 { font-size: 20px; font-weight: 600; letter-spacing: .2px; }
+  .sub { font-size: 12px; color: var(--sub); margin: 6px 0 26px; }
+  label { display: block; font-size: 12px; color: var(--sub); margin: 18px 0 8px; letter-spacing: .3px; }
+  input {
+    width: 100%; padding: 12px 14px; border-radius: 12px;
+    border: 1px solid var(--line-2); background: #fff; color: var(--ink);
+    font-size: 15px; outline: none; transition: border-color .15s, box-shadow .15s;
+  }
+  input:focus { border-color: var(--ink); box-shadow: 0 0 0 3px rgba(17, 18, 20, .06); }
+  button {
+    width: 100%; margin-top: 26px; padding: 13px; border: none; border-radius: 12px;
+    background: var(--ink); color: #fff; font-size: 15px; font-weight: 500; cursor: pointer;
+  }
+  button:hover { background: #000; }
+  .warn {
+    margin-top: 22px; padding: 14px 16px; border-radius: 12px; font-size: 12px;
+    line-height: 1.9; color: #6B5312; background: var(--amber-bg); border: 1px solid #F0E3C4;
+  }
+  .result { margin-top: 26px; text-align: center; display: none; }
+  .result.show { display: block; }
+  .result .label { font-size: 12px; color: var(--sub); }
+  .result .code {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 44px; letter-spacing: 10px; color: var(--ink);
+    margin: 12px 0 10px; font-weight: 600;
+  }
+  .result .note { font-size: 12px; color: var(--mute); line-height: 1.8; }
+  .err { color: #B3261E; font-size: 12px; margin-top: 10px; min-height: 18px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">回声 Agent · 第二通道</div>
+  <div class="card">
+    <h1>帮家人确认一笔操作</h1>
+    <div class="sub">这个页面看不到老人那笔操作的内容，需要你自己填</div>
+
+    <label>老人念给你的 6 位口令</label>
+    <input id="nonce" maxlength="6" placeholder="例如 482913" inputmode="numeric" autofocus>
+
+    <label>他/她要转多少钱（元）</label>
+    <input id="amount" placeholder="例如 300 或 300.50" inputmode="decimal">
+
+    <label>转给谁</label>
+    <input id="payee" placeholder="例如 小王">
+
+    <button onclick="issue()">核对无误，生成授权回执</button>
+    <div class="err" id="err"></div>
+
+    <div class="warn">
+      请自己确认金额与收款人，不要照着老人念的复述——他被话术引导时，最容易在这一步把 300 说成 3000。
+      你填的金额或收款人只要与那笔操作不一致，回执就对不上，老人那边会被拒绝。
+    </div>
+
+    <div class="result" id="result">
+      <div class="label">把下面 6 位回执码念给老人（2 分钟内有效）</div>
+      <div class="code" id="code">------</div>
+      <div class="note">回执只对这一笔有效：金额、收款人或口令任一变，回执即不同。</div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================================================================
+ * 家属端：只做一件事——用「口令 + 金额 + 收款人」算出一个 6 位回执。
+ * 与 app/index.html 中的 shortHash / opSeed / familyReceiptCode 必须完全一致。
+ * 演示简化：真实实现应由子女设备持有私钥，老人端只有公钥验签。
+ * ================================================================ */
+const YUAN = 100;
+
+function toCents(text) {
+  const s = String(text).trim();
+  if (!/^\d+(\.\d{1,2})?$/.test(s)) return null;
+  const [int, frac = ""] = s.split(".");
+  return Number(int) * YUAN + Number((frac + "00").slice(0, 2));
+}
+
+function shortHash(text) {
+  let h = 5381;
+  for (let i = 0; i < text.length; i++) h = ((h << 5) + h + text.charCodeAt(i)) >>> 0;
+  return String(h % 1000000).padStart(6, "0");
+}
+
+function opSeed(params) {
+  return [params.to || "", params.amountCents || 0, (params.sub_ids || []).join(",")].join("|");
+}
+
+function familyReceiptCode(params, nonce) {
+  return shortHash(`${opSeed(params)}|${nonce}|ok`);
+}
+
+function issue() {
+  const err = document.getElementById("err");
+  const nonce = document.getElementById("nonce").value.trim();
+  const payee = document.getElementById("payee").value.trim();
+  const cents = toCents(document.getElementById("amount").value);
+
+  err.textContent = "";
+  document.getElementById("result").classList.remove("show");
+
+  if (!/^\d{6}$/.test(nonce)) { err.textContent = "口令必须是 6 位数字，请问清楚再填。"; return; }
+  if (!payee) { err.textContent = "请填写收款人。"; return; }
+  if (cents === null || cents <= 0) { err.textContent = "金额要写清楚，最多两位小数。"; return; }
+
+  const code = familyReceiptCode({ to: payee, amountCents: cents }, nonce);
+  document.getElementById("code").textContent = code;
+  document.getElementById("result").classList.add("show");
+}
+</script>
+</body>
+</html>

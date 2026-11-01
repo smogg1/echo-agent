@@ -61,8 +61,9 @@ curl.exe -s -X POST http://127.0.0.1:8790/webhook -H "content-type: application/
 
 ```powershell
 python scripts/check.py    # FAIL 0  WARN 0
-python scripts/smoke.py    # PASS 136  FAIL 0
+python scripts/smoke.py    # PASS 137  FAIL 0
 ```
+
 
 
 

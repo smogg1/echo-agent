@@ -1,4 +1,4 @@
-﻿# 回声 Agent · Echo Agent
+# 回声 Agent · Echo Agent
 
 > 让每一次呼唤都有回应 —— 面向银发人群的受控语音银行智能体
 > 2026（第八届）FinTechathon 深圳国际金融科技大赛 · 微众银行金融科技大学生挑战赛 · 人工智能赛道
@@ -17,16 +17,24 @@
 
 **只做两处护城河**：① 可解释的三色判定（每条都能报出 rule + 阈值）；② 双通道授权契约。
 
-## 架构：一个内核，三个入口
+## 架构：一个内核，四个入口
 
 ```
 老人端 index.html ─┐
 家属端 family.html ─┼─→ 意图 → 判定 → 确认 → 执行 → 审计（同一份内核）
-渠道 webhook.mjs ──┘
+渠道 webhook.mjs ──┤
+服务 agent_server.mjs ─┘   （/chat + /confirm + /audit，服务形态）
 ```
 
 模型只决定"想办什么"，决定不了"能不能办"：判定、确认、执行、审计全在代码里。
 分层、不变量、能力矩阵见 [00-架构.md](docs/00-架构.md)；能力清单见 [capabilities.json](docs/capabilities.json)，由 `smoke.py` 与代码逐项对账。
+
+**两种形态，同一份内核**：
+
+| 形态 | 怎么起 | 适合 |
+|---|---|---|
+| 单文件离线 | 双击 `app/index.html` | 现场演示，断网可用，零依赖 |
+| 服务形态 | `node scripts/agent_server.mjs 8792` → 开 `http://127.0.0.1:8792/server-client.html` | 评委看结构化接口：`POST /chat` 返回 `{level, hits, reply, pending, audit}`，`POST /confirm` 执行，`GET /audit` 拿 JSONL |
 
 ## 目录
 
@@ -94,7 +102,7 @@ $env:BANK_LLM_MODEL    = "glm-4-flash"
 | 门禁 | 命令 | 现在 |
 |---|---|---|
 | 静态闸门通过 | `python scripts/check.py` | ✅ |
-| 冒烟通过 | `python scripts/smoke.py` | ✅ 136 项 |
+| 冒烟通过 | `python scripts/smoke.py` | ✅ 137 项 |
 | 架构与代码一致 | `capabilities.json` ↔ `TOOL_IMPL`/`PERMISSIONS`/`RULES` | ✅ |
 | 三场景可演示 | 手工：账单 / 转账 / 订阅 | ✅ |
 | 越权全判红 | 手工：改密 / 挂失 / 大额 | ✅ |

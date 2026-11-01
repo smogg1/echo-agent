@@ -2,6 +2,15 @@
 
 只在顶部追加，格式：`<版本> - <日期> - <一句话>`
 
+## v0.14.0 - 2026-11-01 - 服务形态：/chat 接口与控制台，与单文件版共用内核
+
+- 新增 `scripts/agent_server.mjs`：静态站点 + `POST /chat`（返回 `{level, hits, reply, pending, audit}`）+ `POST /confirm` + `GET /audit`（JSONL）+ `/health`
+- 服务端**不重写业务逻辑**：用 `page_sandbox.mjs` 把 `app/index.html` 的内核加载进 Node `vm`；每个 `session` 独立沙箱，`STATE/pending/AUDIT_LOG` 互相隔离
+- 新增 `app/server-client.html`：开发者视角控制台，左侧对话、右侧直接展示结构化 JSON，便于评委核对“每条判定都有规则名与数字”
+- 新增 `app/README.md`：解释 `app/` 三个文件如何交互（三个入口、不通过进程通信、内核复用方式）
+- 闸门：新增「服务.接口联调」（起服务 → 绿/红/黄三色 → 确认 → 审计行数 → 关服务），smoke 137 项全过
+- 文档：README 架构图改为四入口；`00-架构.md`、部署说明补服务形态与 curl 示例
+
 ## v1.0.0 - 2026-11-01 - 提交版：四份材料齐备，仓库与标签就位
 
 - 提交材料：技术文档（架构图 + 核心算法 + 安全设计）、答辩 PPT（12 页，含讲稿备注）、安全自评报告（7 条已知风险）、源码包（29 项）

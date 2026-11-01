@@ -268,6 +268,77 @@ def step_intent_service() -> None:
     record("PASS" if not problems else "FAIL", "适配器.服务联调", "；".join(problems) if problems else "")
 
 
+def step_agent_server() -> None:
+    """服务形态联调：起服务 → /chat 三色 → /confirm → /audit → 关服务。"""
+    node = find_node()
+    if not node:
+        record("SKIP", "服务.接口联调", "未找到 node")
+        return
+    port = 8793
+    proc = subprocess.Popen(
+        [node, str(ROOT / "scripts" / "agent_server.mjs"), str(port)],
+        cwd=str(ROOT), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    )
+    base = f"http://127.0.0.1:{port}"
+    problems = []
+
+    def post(path: str, payload: dict) -> dict:
+        import urllib.request
+        req = urllib.request.Request(
+            f"{base}{path}",
+            data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+            headers={"content-type": "application/json"},
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+
+    try:
+        import time
+        import urllib.request
+        for _ in range(30):
+            try:
+                with urllib.request.urlopen(f"{base}/health", timeout=1) as resp:
+                    json.loads(resp.read().decode("utf-8"))
+                break
+            except Exception:
+                time.sleep(0.2)
+        else:
+            record("FAIL", "服务.接口联调", "服务 6 秒内没起来")
+            return
+
+        g = post("/chat", {"text": "帮我看看余额", "session": "smoke"})
+        if not (g.get("ok") and g.get("level") == "green" and "余额" in g.get("reply", "")):
+            problems.append(f"绿级查询异常：{g.get('level')}")
+
+        r = post("/chat", {"text": "转给小王 5000 元", "session": "smoke"})
+        rules = [h.get("rule") for h in r.get("hits", [])]
+        if not (r.get("level") == "red" and "amount_over_single" in rules):
+            problems.append(f"红级未拦截或缺少规则名：{r.get('level')}/{rules}")
+
+        y = post("/chat", {"text": "转给小王 100 元", "session": "smoke"})
+        if not (y.get("level") == "yellow" and (y.get("pending") or {}).get("tool") == "transfer"):
+            problems.append("黄级未挂起待确认")
+
+        c = post("/confirm", {"approve": True, "session": "smoke"})
+        if not (c.get("ok") and (c.get("audit") or {}).get("decision") == "confirmed"):
+            problems.append(f"确认后未执行或未留痕：{c.get('audit')}")
+
+        with urllib.request.urlopen(f"{base}/audit?session=smoke", timeout=5) as resp:
+            lines = [x for x in resp.read().decode("utf-8").splitlines() if x.strip()]
+        if len(lines) < 2:
+            problems.append(f"审计行数偏少：{len(lines)}")
+    except Exception as exc:  # noqa: BLE001
+        problems.append(f"联调异常：{exc}")
+    finally:
+        proc.terminate()
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+
+    record("PASS" if not problems else "FAIL", "服务.接口联调", "；".join(problems) if problems else "")
+
+
 def step_behavior() -> None:
     node = find_node()
     if not node:
@@ -297,6 +368,7 @@ def main() -> int:
     step_framework()
     step_intent()
     step_intent_service()
+    step_agent_server()
     step_behavior()
 
     fails = [r for r in results if r[0] == "FAIL"]

@@ -60,14 +60,25 @@
 
 1. **演示可靠性优先**：现场断网、评委机器没 Node、没装依赖，双击就能跑是硬要求；
 2. **零依赖**：没有构建步骤，也没有 `npm install` 失败的可能；
-3. **结构约束靠闸门而不是靠目录**：136 项断言 + 能力清单对账，比“目录看着复杂”更能证明工程质量。
+3. **结构约束靠闸门而不是靠目录**：137 项断言 + 能力清单对账，比“目录看着复杂”更能证明工程质量。
 
-如果评委想看“服务化”形态，跑这两条即可（同一内核，不同入口）：
+## 服务形态（第四个入口，可选）
+
+如果评委想看“系统化”的那面，用服务形态：
 
 ```powershell
-node scripts/webhook.mjs 8790        # IM/APP 渠道
-node scripts/intent_service.mjs 8791 # 长尾意图（LLM 或回放）
+node scripts/agent_server.mjs 8792
+# 控制台：http://127.0.0.1:8792/server-client.html
+# 接口：  POST /chat  POST /confirm  GET /audit
 ```
+
+- `agent_server.mjs` 用 `page_sandbox.mjs` 把 **index.html 里的内核**加载进 Node 的 `vm` 跑，
+  不是重写一遍——所以两种形态的判定结果逐字相同；
+- 每个 `session` 一个独立沙箱，`STATE / pending / AUDIT_LOG` 互不影响；
+- `app/server-client.html` 是**开发者视角**的控制台：左边对话，右边直接展示 `{level, hits, reply, pending, audit}`，
+  方便评委核对“每一条判定都能说出规则名与数字”。
+
+老人端 `index.html` 不受影响，仍然是断网双击可用的单文件版本。
 
 ## 快速自检
 

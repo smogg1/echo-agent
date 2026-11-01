@@ -1,0 +1,8 @@
+{"text": "卡里还有多少", "tool": "query_balance", "params": {}, "confidence": 0.93}
+{"text": "帮我瞅瞅卡里还剩多少钱", "tool": "query_balance", "params": {}, "confidence": 0.9}
+{"text": "这个月我都在哪儿花钱了", "tool": "list_bills", "params": {}, "confidence": 0.88}
+{"text": "哪些钱是自动扣的", "tool": "detect_recurring", "params": {}, "confidence": 0.86}
+{"text": "我下个月房租要交两千", "tool": "custom_plan", "params": { "what": "房租", "when": "下月 1 日", "amountCents": 200000 }, "confidence": 0.82}
+{"text": "给我看看有啥能买的", "tool": "recommend_wealth", "params": {}, "confidence": 0.78}
+{"text": "帮我把那笔钱转给老李", "tool": "transfer", "params": { "to": "老李", "amountCents": 0 }, "confidence": 0.42}
+{"text": "随便弄弄", "tool": "clarify", "params": { "topic": "" }, "confidence": 0.2}

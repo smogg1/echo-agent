@@ -1,0 +1,44 @@
+{
+  "_note": "能力的唯一事实源：必须与 app/index.html 的 TOOL_IMPL / PERMISSIONS / RULES 一致，由 scripts/smoke.py 的「框架.能力清单与代码一致」校验。改代码必须同步改这里。",
+  "tools": {
+    "query_balance": { "scene": "账单分析", "level": "green", "confirm": "none" },
+    "list_bills": { "scene": "账单分析", "level": "green", "confirm": "none" },
+    "audit_leak": { "scene": "账单分析", "level": "green", "confirm": "none", "steps": ["list_bills", "list_subscriptions"] },
+    "list_subscriptions": { "scene": "订阅代扣", "level": "green", "confirm": "none" },
+    "cancel_subscription": { "scene": "订阅代扣", "level": "yellow", "confirm": "user" },
+    "upcoming_renewals": { "scene": "订阅代扣", "level": "green", "confirm": "none" },
+    "detect_recurring": { "scene": "订阅代扣", "level": "green", "confirm": "none", "note": "按名称含会员/订阅/代扣识别，是启发式不是模型判断" },
+    "transfer": { "scene": "智能转账", "level": "yellow", "confirm": "user_or_family" },
+    "schedule_transfer": { "scene": "智能转账", "level": "yellow", "confirm": "user" },
+    "split_bill": { "scene": "智能转账", "level": "yellow", "confirm": "user" },
+    "freeze_card": { "scene": "卡片管理", "level": "green", "confirm": "none", "reversible": true, "note": "止损优先：先冻结再核身" },
+    "unfreeze_card": { "scene": "卡片管理", "level": "yellow", "confirm": "user", "note": "恢复用卡也要确认，不留一句话解除保护的口子" },
+    "request_limit_change": { "scene": "卡片管理", "level": "yellow", "confirm": "user", "note": "只提交申请，额度不当场变更" },
+    "apply_card": { "scene": "卡片管理", "level": "yellow", "confirm": "user" },
+    "fx_rate": { "scene": "跨场景联动", "level": "green", "confirm": "none", "external": "scripts/fx_server.py" },
+    "birthday_plan": { "scene": "跨场景联动", "level": "yellow", "confirm": "user", "note": "账单→预算锁定→到点提醒，串三件事" },
+    "custom_plan": { "scene": "跨场景联动", "level": "yellow", "confirm": "user", "note": "自定义联动计划：交房租/还花呗/学费等，预留+提醒+到点确认" },
+    "list_wealth": { "scene": "理财操作", "level": "green", "confirm": "none" },
+    "recommend_wealth": { "scene": "理财操作", "level": "green", "confirm": "none", "note": "只做产品对比，明确不构成投资建议" },
+    "risk_assess": { "scene": "理财操作", "level": "green", "confirm": "none" },
+    "buy_wealth": { "scene": "理财操作", "level": "yellow", "confirm": "user", "note": "超过 5,000.00 元由 wealth_over_limit 判红" },
+    "repeat_last": { "scene": "无障碍", "level": "green", "confirm": "none", "note": "重念上一句，不动任何数据" },
+    "safety_check": { "scene": "无障碍", "level": "green", "confirm": "none", "note": "反诈咨询，不动钱" },
+    "clarify": { "scene": "无障碍", "level": "green", "confirm": "none", "note": "只说了名词没说动作时反问，不猜方向" }
+  },
+  "red_only": {
+    "change_password": { "scene": "卡片管理", "reason": "动了账户安全本身，只做拦截不做实现" },
+    "report_loss": { "scene": "卡片管理", "reason": "正式挂失要换卡号、不可逆，交人工核验" }
+  },
+  "rules": [
+    "memo_payee_rejected",
+    "payee_unverified_phone",
+    "amount_over_single",
+    "amount_over_daily",
+    "payee_first_time",
+    "new_payee_over_limit",
+    "wealth_over_limit",
+    "irreversible_op",
+    "freq_over_limit"
+  ]
+}
